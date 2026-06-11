@@ -24,9 +24,8 @@ ADMIN_ID = 1989200344
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Храним заявки и статистику
 pending_requests = {}
-unsubscribed = set()  # Кто отписался от рассылки
+unsubscribed = set()  # Отписались только от авто-напоминаний
 total_received = 0
 total_accepted = 0
 
@@ -71,7 +70,7 @@ async def unsubscribe(callback: CallbackQuery):
     unsubscribed.add(user_id)
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.answer("✅ Рассылка отключена!", show_alert=False)
-    await callback.message.answer("🔕 Ты отписался от рассылки. Больше напоминаний не будет.")
+    await callback.message.answer("🔕 Ты отписался от авто-напоминаний каждые 15 минут.")
 
 
 @dp.chat_join_request(F.chat.id == CHANNEL_ID)
@@ -120,7 +119,10 @@ async def accept_all(message: Message):
 async def count_requests(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
-    await message.answer(f"📊 Заявок в очереди: {len(pending_requests)}\n🔕 Отписавшихся: {len(unsubscribed)}")
+    await message.answer(
+        f"📊 Заявок в очереди: {len(pending_requests)}\n"
+        f"🔕 Отписавшихся от авто: {len(unsubscribed)}"
+    )
 
 
 @dp.message(Command("stats"))
@@ -132,7 +134,7 @@ async def stats(message: Message):
         f"📥 Всего заявок: {total_received}\n"
         f"✅ Принято: {total_accepted}\n"
         f"⏳ В очереди: {len(pending_requests)}\n"
-        f"🔕 Отписавшихся: {len(unsubscribed)}"
+        f"🔕 Отписавшихся от авто: {len(unsubscribed)}"
     )
 
 
@@ -146,7 +148,7 @@ async def post(message: Message):
         await message.answer("❌ Напиши текст!\nПример: /post Ваучеры готовы! 🎁")
         return
 
-    count = len([u for u in pending_requests if u not in unsubscribed])
+    count = len(pending_requests)
     if count == 0:
         await message.answer("📭 Нет пользователей для рассылки!")
         return
@@ -155,9 +157,8 @@ async def post(message: Message):
     sent = 0
     failed = 0
 
+    # /post получают ВСЕ включая отписавшихся от авто
     for user_id in pending_requests:
-        if user_id in unsubscribed:
-            continue
         try:
             await bot.send_message(chat_id=user_id, text=text)
             sent += 1
@@ -175,6 +176,7 @@ async def cmd_start(message: Message):
 
 
 async def reminder_task():
+    # Авто-напоминание только тем кто НЕ отписался
     await asyncio.sleep(15 * 60)
     while True:
         active = [u for u in pending_requests if u not in unsubscribed]
