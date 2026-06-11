@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
 from aiogram.types import (
@@ -9,10 +10,13 @@ from aiogram.types import (
     Message,
     FSInputFile
 )
-from config import BOT_TOKEN, CHANNEL_ID, GEM_IMAGE_URL, GEM_LINK
-import os
 
 logging.basicConfig(level=logging.INFO)
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL_ID = -4296793908
+GEM_IMAGE = "gems.png"
+GEM_LINK = "https://gclick.su?ref=gemes"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -32,22 +36,15 @@ async def handle_join_request(request: ChatJoinRequest):
     text = (
         f"Привет, {user.first_name}! 👋\n\n"
         "Твоя заявка на рассмотрении!\n\n"
-        "Пока ждёшь — забери 2000 гемов ниже? Нажми кнопку 👇"
+        "Пока ждёшь забери 2000 гемов по кнопке ниже 👇"
     )
 
     try:
-        if GEM_IMAGE_URL and os.path.isfile(GEM_IMAGE_URL):
-            photo = FSInputFile(GEM_IMAGE_URL)
+        if os.path.isfile(GEM_IMAGE):
+            photo = FSInputFile(GEM_IMAGE)
             await bot.send_photo(
                 chat_id=user.id,
                 photo=photo,
-                caption=text,
-                reply_markup=keyboard
-            )
-        elif GEM_IMAGE_URL and GEM_IMAGE_URL.startswith("http"):
-            await bot.send_photo(
-                chat_id=user.id,
-                photo=GEM_IMAGE_URL,
                 caption=text,
                 reply_markup=keyboard
             )
@@ -58,12 +55,12 @@ async def handle_join_request(request: ChatJoinRequest):
                 reply_markup=keyboard
             )
     except Exception as e:
-        logging.error(f"Не удалось отправить сообщение пользователю {user.id}: {e}")
+        logging.error(f"Ошибка: {e}")
 
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
-    await message.answer("Бот активен! ✅\nЖду заявок в канал...")
+    await message.answer("Бот активен! ✅")
 
 
 async def main():
