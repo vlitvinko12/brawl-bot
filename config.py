@@ -1,6 +1,6 @@
 # Токен твоего бота от @BotFather
 import os
-BOT_TOKEN = os.environ.get("8603703097:AAE0yTPV1OQiV1GPStK7___1ZOc249cWr-4")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 # ID твоего канала (не меняй)
 CHANNEL_ID = -4296793908
