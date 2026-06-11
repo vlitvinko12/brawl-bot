@@ -25,19 +25,19 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 pending_requests = {}
-unsubscribed = set()  # Отписались только от авто-напоминаний
+unsubscribed = set()
 total_received = 0
 total_accepted = 0
 
 
-def get_keyboard():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💎 Забрать 2000 Гемов", url=GEM_LINK)],
-        [InlineKeyboardButton(text="🔕 Отключить рассылку", callback_data="unsubscribe")]
-    ])
+def get_keyboard(show_unsubscribe=False):
+    buttons = [[InlineKeyboardButton(text="💎 Забрать 2000 Гемов", url=GEM_LINK)]]
+    if show_unsubscribe:
+        buttons.append([InlineKeyboardButton(text="🔕 Отключить рассылку", callback_data="unsubscribe")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-async def send_gems_message(user_id, first_name):
+async def send_gems_message(user_id, first_name, show_unsubscribe=False):
     text = (
         f"Привет, {first_name}! 👋\n\n"
         "Твоя заявка на рассмотрении!\n\n"
@@ -50,13 +50,13 @@ async def send_gems_message(user_id, first_name):
                 chat_id=user_id,
                 photo=photo,
                 caption=text,
-                reply_markup=get_keyboard()
+                reply_markup=get_keyboard(show_unsubscribe)
             )
         else:
             await bot.send_message(
                 chat_id=user_id,
                 text=text,
-                reply_markup=get_keyboard()
+                reply_markup=get_keyboard(show_unsubscribe)
             )
         return True
     except Exception as e:
@@ -83,7 +83,8 @@ async def handle_join_request(request: ChatJoinRequest):
         "time": datetime.now()
     }
     total_received += 1
-    await send_gems_message(user.id, user.first_name)
+    # Первое сообщение — БЕЗ кнопки отписки
+    await send_gems_message(user.id, user.first_name, show_unsubscribe=False)
 
 
 @dp.message(Command("accept_all"))
@@ -157,7 +158,6 @@ async def post(message: Message):
     sent = 0
     failed = 0
 
-    # /post получают ВСЕ включая отписавшихся от авто
     for user_id in pending_requests:
         try:
             await bot.send_message(chat_id=user_id, text=text)
@@ -176,7 +176,7 @@ async def cmd_start(message: Message):
 
 
 async def reminder_task():
-    # Авто-напоминание только тем кто НЕ отписался
+    # Первое авто-напоминание через 15 минут — С кнопкой отписки
     await asyncio.sleep(15 * 60)
     while True:
         active = [u for u in pending_requests if u not in unsubscribed]
@@ -184,7 +184,8 @@ async def reminder_task():
             logging.info(f"Авто-напоминание: {len(active)} пользователей")
             for user_id in active:
                 data = pending_requests[user_id]
-                await send_gems_message(user_id, data["first_name"])
+                # Со второго сообщения — С кнопкой отписки
+                await send_gems_message(user_id, data["first_name"], show_unsubscribe=True)
                 await asyncio.sleep(0.05)
         await asyncio.sleep(15 * 60)
 
