@@ -14,7 +14,7 @@ from aiogram.types import (
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHANNEL_ID = -4296793908
+CHANNEL_ID = -1004296793908
 GEM_IMAGE = "gems.png"
 GEM_LINK = "https://gclick.su?ref=gemes"
 
